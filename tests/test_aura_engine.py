@@ -101,6 +101,32 @@ class TestOrchestratorAsync(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(len(resp["tools_executed"]) > 0)
         self.assertIn("scope", resp["action_summary"].lower())
 
+    async def test_operations_dataset_retrieval(self):
+        """Tests 100+ operations dataset retrieval for payments and software launch."""
+        from backend.data.operations_dataset import search_operations
+        pay_res = search_operations("how to pay jazzcash")
+        self.assertIsNotNone(pay_res)
+        self.assertIn("jazzcash", pay_res["solution_en"].lower())
+
+        soft_res = search_operations("how to open the software")
+        self.assertIsNotNone(soft_res)
+        self.assertIn("localhost:8000", soft_res["solution_en"])
+
+    async def test_self_learning_cycle(self):
+        """Tests autonomous self-learning when user teaches the agent a new fact."""
+        from backend.agent.self_learning import learning_engine
+        teach_text = "Yaad rakho: hamara naya emergency support number 0300-1234567 hai."
+        resp = await orchestrator.handle_user_input(
+            session_id="test_sess_learn",
+            text=teach_text
+        )
+        self.assertTrue("yaad" in resp["text"].lower() or "learned" in resp["text"].lower())
+
+        # Verify recall of the newly learned fact
+        recall = learning_engine.query_memory("emergency support number")
+        self.assertIsNotNone(recall)
+        self.assertIn("0300-1234567", recall["content_en"])
+
 
 if __name__ == "__main__":
     unittest.main()

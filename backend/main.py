@@ -117,10 +117,39 @@ async def calculate_scope(req: ScopeRequest):
     return {"status": "success", "scope": scope}
 
 
+class LearnRequest(BaseModel):
+    topic: str
+    content: str
+    keywords: list[str] = None
+
 @app.get("/api/knowledge/search")
 async def search_knowledge(q: str = Query(..., description="Query terms")):
     results = knowledge_base.search(q, top_k=3)
     return {"query": q, "results": results}
+
+
+@app.get("/api/learned")
+async def get_learned_memory():
+    from backend.agent.self_learning import learning_engine
+    return learning_engine.get_stats()
+
+
+@app.post("/api/learn")
+async def learn_new_fact(req: LearnRequest):
+    from backend.agent.self_learning import learning_engine
+    item = learning_engine.learn_new_fact(
+        topic=req.topic,
+        content=req.content,
+        keywords=req.keywords,
+        source="api_training"
+    )
+    return {"status": "success", "learned": item}
+
+
+@app.get("/api/operations")
+async def list_operations():
+    from backend.data.operations_dataset import OPERATIONS_DATABASE
+    return {"total": len(OPERATIONS_DATABASE), "operations": OPERATIONS_DATABASE}
 
 
 @app.post("/api/chat")

@@ -8,6 +8,8 @@ A bilingual real-time voice and chat platform designed for enterprise IT triage,
 
 - Real-Time Voice Processing: Interactive speech recognition with animated waveform visualization and automatic text-to-speech voice playback.
 - Trilingual Understanding: Native handling and code-switching across English, Urdu, and Roman Urdu.
+- 100+ Operations Training: Pre-trained across payments (JazzCash, Easypaisa, Raast, Bank Transfer, Cards), software setup and launch, account recovery, technical troubleshooting, FBR billing, and project delivery.
+- Autonomous Self-Learning Engine: Learns and retains new facts, business rules, and contact information dynamically during user conversations.
 - Customer-Centric Triage: Plain-language, reassuring problem diagnosis with automatic complaint ticket generation.
 - Incident Escalation: Classifies issues from P1 (Critical) to P4 (Low) and routes them to on-call engineering leads.
 - Dual-Currency Project Scoping: Computes software project durations, sprint milestones, and dual budget estimates in USD and PKR.
@@ -109,7 +111,11 @@ aura-ai-agent/
 │   │   ├── bilingual_processor.py # Dialect analysis and intent scoring
 │   │   ├── llm_client.py        # Customer response reasoning engine
 │   │   ├── orchestrator.py      # Conversation turn and state manager
+│   │   ├── self_learning.py     # Autonomous learning and memory engine
 │   │   └── tools.py             # Tool execution registry
+│   ├── data/
+│   │   ├── operations_dataset.py # 100+ operations training library
+│   │   └── learned_memory.json  # Persistent learned facts
 │   ├── knowledge/
 │   │   └── store.py             # Runbook retrieval store
 │   └── ops/

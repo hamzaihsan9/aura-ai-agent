@@ -13,6 +13,8 @@ from typing import Dict, Any, List, Optional
 from backend.agent.tools import TOOL_DEFINITIONS, ToolExecutor
 from backend.agent.bilingual_processor import BilingualProcessor
 from backend.knowledge.store import knowledge_base
+from backend.data.operations_dataset import search_operations
+from backend.agent.self_learning import learning_engine
 
 SYSTEM_PROMPT = """You are Aura, an exceptionally polite, warm, and helpful AI assistant for customer support and IT services.
 Your audience includes everyday common people who may not be technical and need simple, comforting guidance.
@@ -57,6 +59,62 @@ class LLMClient:
         executed_tools = []
         speech_text = ""
         action_summary = ""
+
+        # Step 0: Check if user is teaching the AI a new rule or fact (Self-Learning trigger)
+        teaching = learning_engine.detect_teaching_prompt(user_text)
+        if teaching:
+            if lang == "ur":
+                speech_text = f"بہت شکریہ! میں نے یہ نئی معلومات کامیابی سے یاد رکھ لی ہے ({teaching['id']})۔ آئندہ میں اس کے مطابق رہنمائی کروں گا۔"
+            elif lang == "roman_ur":
+                speech_text = f"Bohat shukriya! Main ne yeh naya point yaad kar liya hai aur memory mein save kar liya hai ({teaching['id']})."
+            else:
+                speech_text = f"Thank you! I have successfully learned and retained this new knowledge ({teaching['id']}) in my persistent memory."
+            return {
+                "text": speech_text,
+                "speech": speech_text,
+                "language": lang,
+                "urgency": 1,
+                "tools_executed": [{"tool": "self_learn_fact", "result": {"status": "learned", "data": teaching}}],
+                "action_summary": f"Self-learned new operational fact ({teaching['id']})."
+            }
+
+        # Step 1: Check dynamic Learned Knowledge Memory
+        learned_match = learning_engine.query_memory(user_text)
+        if learned_match:
+            if lang == "ur":
+                speech_text = learned_match.get("content_ur", learned_match.get("content_en", ""))
+            elif lang == "roman_ur":
+                speech_text = learned_match.get("content_roman", learned_match.get("content_en", ""))
+            else:
+                speech_text = learned_match.get("content_en", "")
+
+            return {
+                "text": speech_text,
+                "speech": speech_text,
+                "language": lang,
+                "urgency": 1,
+                "tools_executed": [{"tool": "query_learned_memory", "result": {"status": "retrieved", "data": learned_match}}],
+                "action_summary": f"Retrieved response from learned memory ({learned_match['id']})."
+            }
+
+        # Step 2: Check pre-trained Operations Database (100+ commands)
+        op_match = search_operations(user_text)
+        if op_match:
+            if lang == "ur":
+                speech_text = op_match["solution_ur"]
+            elif lang == "roman_ur":
+                speech_text = op_match["solution_roman"]
+            else:
+                speech_text = op_match["solution_en"]
+
+            return {
+                "text": speech_text,
+                "speech": speech_text,
+                "language": lang,
+                "urgency": 1,
+                "tools_executed": [{"tool": "operations_kb_lookup", "result": {"status": "matched", "category": op_match["category"], "id": op_match["id"]}}],
+                "action_summary": f"Provided solution for '{op_match['category']}' ({op_match['id']})."
+            }
 
         # Problem Type 1: Payment issue / Money stuck / Transaction failed
         if "payment" in user_lower or "pese" in user_lower or "paisa" in user_lower or "jazzcash" in user_lower or "easypaisa" in user_lower or "kat" in user_lower or intent_info["primary_intent"] == "payment_failure":
@@ -147,7 +205,7 @@ class LLMClient:
                     f"This covers end-to-end design, development, and quality assurance. Would you like to schedule a discovery call?"
                 )
 
-            action_summary = f"Estimated project duration ({s_data['estimated_weeks']} weeks) and budget (Rs. {s_data['total_pkr']:,} PKR)."
+            action_summary = f"Estimated project scope and budget ({s_data['estimated_weeks']} weeks, Rs. {s_data['total_pkr']:,} PKR)."
 
         # Problem Type 4: Speak to manager / Urgent escalation
         elif "manager" in user_lower or "lead" in user_lower or "senior" in user_lower or "escalate" in user_lower or "jaldi" in user_lower or intent_info["primary_intent"] == "urgent_escalation":
